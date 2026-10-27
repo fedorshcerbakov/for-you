@@ -732,10 +732,14 @@ async function renderOrderSync() {
   return orderDrivePhotos(all).map(f => f.id).filter(id => !hidden.includes(id));
 }
 
-document.getElementById('cancelUpload').addEventListener('click', () => {
+/* закрытие диалога: книга и галерея обновятся (фото уже могли добавиться) */
+function closeUploadModal() {
   modal.classList.add('hidden');
   setStatus('');
-});
+  refreshBookAndGallery();
+}
+
+document.getElementById('cancelUpload').addEventListener('click', closeUploadModal);
 
 document.getElementById('loginBtn').addEventListener('click', loginGoogle);
 
@@ -764,7 +768,7 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
 });
 
 modal.addEventListener('click', (e) => {
-  if (e.target === modal) { modal.classList.add('hidden'); setStatus(''); }
+  if (e.target === modal) { closeUploadModal(); }
 });
 
 /* ===== (загрузка списка фото с Drive в книгу) =====
