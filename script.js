@@ -191,6 +191,93 @@ let closeTimer = null;     // таймер отложенного закрыти
 const DURATION = 1000;    // должно совпадать с transition в CSS
 let busy = false;         // защита от двойных нажатий во время анимации
 
+/* =========================================================
+   МОБИЛЬНЫЙ ДВИЖОК: карточная книга (по одной странице)
+   Каждая pages[i] — отдельная карта. Показ ровно одной.
+   Переворот: карта поворачивается вокруг центра (flip).
+   ========================================================= */
+const mobileBook = {
+  active: false,
+  cardEls: [],      // DOM-карты (по одной на страницу)
+  idx: 0,           // какая страница сейчас показана
+};
+
+function mobileInit() {
+  if (!isMobile()) return false;
+  mobileBook.active = true;
+  /* строим карты: обычные .m-card внутри book */
+  book.querySelectorAll('.m-card').forEach(e => e.remove());
+  mobileBook.cardEls = pages.map((pData, i) => {
+    const card = document.createElement('div');
+    card.className = 'm-card';
+    card.style.zIndex = 1;
+    /* содержимое = рендер страницы как front */
+    const face = renderPage(pData, 'front');
+    face.classList.add('m-face');
+    card.appendChild(face);
+    book.appendChild(card);
+    return card;
+  });
+  mobileBook.idx = 0;
+  mobileShow();
+  return true;
+}
+
+/* показать карту idx, остальные — под/скрыты */
+function mobileShow() {
+  mobileBook.cardEls.forEach((card, i) => {
+    if (i === mobileBook.idx) {
+      card.style.zIndex = 30;
+      card.style.visibility = 'visible';
+      card.classList.remove('turned');
+    } else if (i === mobileBook.idx + 1) {
+      /* следующая — сразу под текущей (её увидим после переворота) */
+      card.style.zIndex = 20;
+      card.style.visibility = 'visible';
+    } else {
+      card.style.zIndex = Math.max(1, 10 - Math.abs(i - mobileBook.idx));
+      card.style.visibility = i < mobileBook.idx - 2 || i > mobileBook.idx + 3 ? 'hidden' : 'visible';
+    }
+  });
+  updateMobileUI();
+}
+
+/* переворот вперёд: карта idx поворачивается, открывая idx+1 */
+function mobileNext() {
+  if (mobileBook.idx >= pages.length - 1) return;
+  const card = mobileBook.cardEls[mobileBook.idx];
+  card.style.zIndex = 40;
+  card.classList.add('turned');
+  mobileBook.idx++;
+  mobileShow();
+  /* карта после анимации уходит вниз */
+  setTimeout(() => {
+    card.style.zIndex = 1;
+    card.style.visibility = 'hidden';
+  }, 600);
+}
+
+function mobilePrev() {
+  if (mobileBook.idx <= 0) return;
+  mobileBook.idx--;
+  const card = mobileBook.cardEls[mobileBook.idx];
+  card.style.visibility = 'visible';
+  card.style.zIndex = 40;
+  /* возвращаем переворот */
+  card.classList.remove('turned');
+  mobileShow();
+  setTimeout(() => { card.style.zIndex = 30; }, 600);
+}
+
+function updateMobileUI() {
+  const progress = document.getElementById('progress');
+  const last = pages.length - 1;
+  if (mobileBook.idx === 0) progress.textContent = 'обложка';
+  else if (mobileBook.idx === last) progress.textContent = 'конец';
+  else progress.textContent = 'стр. ' + mobileBook.idx + ' из ' + (last - 1);
+  document.getElementById('prevBtn').disabled = mobileBook.idx === 0;
+  document.getElementById('nextBtn').disabled = mobileBook.idx >= last;
+}
 // порядок наложения: ПК — разворотная модель; телефон — карточная
 const isMobile = () => window.matchMedia('(max-width:600px)').matches;
 
@@ -210,6 +297,7 @@ function restack() {
 restack();
 
 function flipNext() {
+  if (mobileBook.active) { mobileNext(); return; }
   if (busy || current >= leafCount) return;
   busy = true;
   /* открытие отменяет отложенное закрытие (анти-гонка таймеров) */
@@ -231,6 +319,7 @@ function flipNext() {
 }
 
 function flipPrev() {
+  if (mobileBook.active) { mobilePrev(); return; }
   if (busy || current <= 0) return;
   busy = true;
   setEnd(false);                // уходим с задней обложки — книга раскрывается
@@ -332,6 +421,13 @@ for (let i = 0; i < 16; i++) {
 
 scene.classList.add('closed');
 updateUI();
+
+/* телефон: включаем карточный движок вместо листов */
+if (isMobile()) {
+  document.body.classList.add('m-mode');
+  leaves.forEach(l => l.style.display = 'none');
+  mobileInit();
+}
 
 /* если токен уже есть — сразу подтягиваем фото с Drive в книгу */
 if (accessToken) {
@@ -912,6 +1008,12 @@ async function rebuildWithDrivePhotos() {
      как было до пересборки (иначе книга «теряет» прочитанные страницы) */
   current = Math.min(current, newCount);
   leaves.forEach((l, i) => { l.classList.toggle('flipped', i < current); });
+  /* на телефоне: пересобрать карточный движок и спрятать листы */
+  if (isMobile()) {
+    leaves.forEach(l => l.style.display = 'none');
+    if (!document.body.classList.contains('m-mode')) document.body.classList.add('m-mode');
+    mobileInit();
+  }
   setEnd(current === leafCount);
   restack();
   updateUI();

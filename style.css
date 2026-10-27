@@ -410,6 +410,24 @@ body{
 /* ---------- мобильный режим: карточная книга (по одной странице) ---------- */
 /* обложка → стр.1 → стр.2 → … листы переворачиваются как карты вокруг центра,
    перевёрнутые уходят в стопку позади (виден их край-«подложка») */
+/* ---------- мобильный карточный движок ---------- */
+.m-card{
+  position:absolute; inset:0;
+  transform-style: preserve-3d;
+  transition: transform .55s cubic-bezier(.55,.06,.25,1);
+  border-radius: 6px;
+}
+.m-card.turned{ transform: rotateY(-180deg); }
+.m-card .m-face{
+  position:absolute; inset:0;
+  backface-visibility: hidden;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(90,20,50,.28);
+  background: var(--paper);
+  overflow: hidden;
+}
+/* у turned-карты содержимое зеркалится — прячем (карта ушла вниз) */
+.m-card.turned .m-face{ visibility: hidden; }
 @media (max-width:600px){
   :root{ --page-h: min(70vh, 120vw); }
 
@@ -453,6 +471,9 @@ body{
 
   /* закрытая книга: только обложка, остальные — стопка сзади, виден край */
   .scene.closed .leaf{ visibility:hidden; }
+  /* карточный движок: десктопные листы не нужны */
+  body.m-mode .leaf{ display:none; }
+  body.m-mode .book-base{ display:none; }
   .scene.closed .leaf.cover{ visibility:visible; }
   /* конец книги: задняя обложка */
   .scene.end .leaf{ visibility:hidden; }
