@@ -588,7 +588,7 @@ async function renderGallery() {
     const q = encodeURIComponent(`'${CONFIG.FOLDER_ID}' in parents and mimeType contains 'image/' and trashed = false`);
     const resp = await fetch(
       'https://www.googleapis.com/drive/v3/files?q=' + q +
-      '&fields=files(id,name)&orderBy=createdTime desc&pageSize=100',
+      '&fields=files(id,name,createdTime)&orderBy=createdTime desc&pageSize=100',
       { headers: { Authorization: 'Bearer ' + accessToken } }
     );
     if (resp.ok) {
@@ -611,6 +611,7 @@ async function renderGallery() {
     const isHidden = hidden.includes(f.id);
     const cell = document.createElement('div');
     cell.className = 'gallery-cell' + (isHidden ? ' off' : '');
+    cell.dataset.photoId = f.id;
     const img = document.createElement('img');
     img.src = 'https://lh3.googleusercontent.com/d/' + f.id + '=w120-h120-c';
     img.alt = f.name;
@@ -677,19 +678,39 @@ async function renderGallery() {
   });
 }
 
-/* перемещение Drive-фото в порядке книги */
+/* перемещение Drive-фото в порядке книги — прямо в галерее (мгновенно) */
 function moveDrivePhoto(fileId, dir) {
-  const visible = getDriveOrder().filter(id => !getHiddenIds().includes(id));
-  // порядок может не знать о новых фото — соберём фактический список
-  renderOrderSync().then(order => {
-    const idx = order.indexOf(fileId);
-    if (idx === -1) return;
-    const target = idx + dir;
-    if (target < 0 || target >= order.length) return;
-    order.splice(idx, 1);
-    order.splice(target, 0, fileId);
-    setDriveOrder(order);
-    refreshBookAndGallery();
+  const cells = Array.from(gallery.children).filter(cel => !cel.classList.contains('off'));
+  const cell = cells.find(cel => cel.dataset.photoId === fileId);
+  if (!cell) return;
+  const idx = cells.indexOf(cell);
+  const target = idx + dir;
+  if (target < 0 || target >= cells.length) return;
+
+  /* перестановка в DOM: фото передвигается тут же */
+  if (dir === -1) {
+    gallery.insertBefore(cell, cells[target]);
+  } else {
+    const next = cells[target].nextSibling;
+    if (next) gallery.insertBefore(cell, next);
+    else gallery.appendChild(cell);
+  }
+
+  /* сохраняем новый порядок и тихо обновляем книгу */
+  const newOrder = Array.from(gallery.children).filter(cel => !cel.classList.contains('off')).map(cel => cel.dataset.photoId);
+  setDriveOrder(newOrder);
+  updateMoveButtons();
+  rebuildWithDrivePhotos();
+}
+
+/* обновить состояние стрелок (первая ↑ и последняя ↓ disabled) */
+function updateMoveButtons() {
+  const cells = Array.from(gallery.children).filter(cel => !cel.classList.contains('off'));
+  cells.forEach((cel, i) => {
+    const up = cel.querySelector('.move-btn.up');
+    const down = cel.querySelector('.move-btn.down');
+    if (up) up.disabled = (i === 0);
+    if (down) down.disabled = (i === cells.length - 1);
   });
 }
 
@@ -699,7 +720,7 @@ async function renderOrderSync() {
   try {
     const q = encodeURIComponent(`'${CONFIG.FOLDER_ID}' in parents and mimeType contains 'image/' and trashed = false`);
     const resp = await fetch(
-      'https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)&pageSize=100',
+      'https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name,createdTime)&pageSize=100',
       { headers: { Authorization: 'Bearer ' + accessToken } }
     );
     if (resp.ok) {
@@ -756,7 +777,7 @@ async function loadDrivePhotos() {
     const q = encodeURIComponent(`'${CONFIG.FOLDER_ID}' in parents and mimeType contains 'image/' and trashed = false`);
     const resp = await fetch(
       'https://www.googleapis.com/drive/v3/files?q=' + q +
-      '&fields=files(id,name,mimeType)&orderBy=createdTime desc&pageSize=100',
+      '&fields=files(id,name,createdTime,mimeType)&orderBy=createdTime desc&pageSize=100',
       { headers: { Authorization: 'Bearer ' + accessToken } }
     );
     if (!resp.ok) return [];
@@ -782,11 +803,15 @@ function setDriveOrder(arr) {
   localStorage.setItem(DRIVE_ORDER_KEY, JSON.stringify(arr));
 }
 
-/* упорядочить список фото: сначала по сохранённому порядку, потом новые в конец */
+/* упорядочить список фото: сначала по сохранённому порядку, потом новые в конец.
+   Новые идут в конце в порядке загрузки (свежие — в самый конец) */
 function orderDrivePhotos(files) {
   const order = getDriveOrder();
   const known = order.map(id => files.find(f => f.id === id)).filter(Boolean);
-  const rest = files.filter(f => !order.includes(f.id));
+  /* rest: сортируем по дате создания ПО ВОЗРАСТАНИЮ — свежие в самый конец */
+  const rest = files
+    .filter(f => !order.includes(f.id))
+    .sort((a, b) => (a.createdTime || '').localeCompare(b.createdTime || ''));
   return known.concat(rest);
 }
 
@@ -851,7 +876,7 @@ async function rebuildWithDrivePhotos() {
     leaves.push(leaf);
   }
   leafCount = newCount;
-  slider.max = String(leafCount);
+  /* ползунок удалён */
   current = Math.min(current, leafCount);
   setEnd(current === leafCount);
   restack();
