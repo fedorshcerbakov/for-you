@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Наша история ♥</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="sky" id="sky"></div>
+
+<div class="scene">
+  <div class="book-shadow"></div>
+  <div class="book closed" id="book"></div>
+</div>
+
+<button class="nav prev" id="prevBtn" title="Назад">‹</button>
+<button class="nav next" id="nextBtn" title="Вперёд">›</button>
+
+<div class="hud">
+  <div class="slider-wrap">
+    <label for="pageSlider">стр.</label>
+    <input type="range" id="pageSlider" min="0" max="15" value="0" step="1" aria-label="Быстрая навигация по страницам">
+    <span class="progress" id="progress">обложка</span>
+  </div>
+</div>
+
+<button class="upload-fab" id="uploadFab" title="Добавить фото в альбом">＋</button>
+
+<div class="modal hidden" id="uploadModal">
+  <div class="modal-box">
+    <h3>Добавить фото в нашу историю</h3>
+    <p class="hint">Фото загрузится в наш альбом на Google Drive и появится в книге</p>
+
+    <div class="drive-login" id="driveLogin">
+      <button class="btn google" id="loginBtn">Войти в Google</button>
+      <p class="hint small">Один раз: разрешается доступ к папке альбома. Токен хранится в этом браузере.</p>
+    </div>
+
+    <div class="upload-form hidden" id="uploadForm">
+      <label for="fileInput">Выбрать фото</label>
+      <input type="file" id="fileInput" accept="image/*">
+      <label for="captionInput">Подпись (пусто — подберу милую сам)</label>
+      <input type="text" id="captionInput" placeholder="например: наш вечер у моря">
+      <div class="row">
+        <button class="btn" id="uploadBtn">Загрузить в альбом</button>
+        <button class="btn ghost" id="cancelUpload">Отмена</button>
+      </div>
+      <p class="status" id="uploadStatus"></p>
+    </div>
+
+    <div class="manage hidden" id="manageArea">
+      <label>Фото в альбоме (↑↓ — порядок, 🗑 — скрыть, ↩ — вернуть, ✕ — удалить с Drive)</label>
+      <div class="gallery" id="gallery"></div>
+      <p class="hint small">🗑 скрывает из книги, фото остаётся на Drive. ✕ (у скрытых) — удаляет фото с Google Drive в корзину.</p>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
