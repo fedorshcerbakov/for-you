@@ -249,7 +249,6 @@ function updateUI() {
   }
   document.getElementById('prevBtn').disabled = current === 0;
   document.getElementById('nextBtn').disabled = current === leafCount;
-  updateSlider();
 }
 
 /* ===== управление ===== */
@@ -281,50 +280,7 @@ document.addEventListener('touchend', e => {
   touchX = null;
 }, { passive: true });
 
-/* ===== мобильный режим ===== */
-let mobileMode = false;
 
-function checkMobile() {
-  const wasMobile = mobileMode;
-  mobileMode = window.innerWidth <= 600;
-  if (mobileMode !== wasMobile) {
-    document.body.classList.toggle('mobile', mobileMode);
-  }
-}
-
-window.addEventListener('resize', checkMobile);
-checkMobile();
-
-/* ===== ползунок быстрой навигации ===== */
-const slider = document.getElementById('pageSlider');
-slider.max = String(leafCount);
-
-function updateSlider() {
-  slider.value = String(current);
-}
-
-function jumpTo(target) {
-  if (busy || target === current) return;
-  busy = true;
-  // мгновенно (без анимации) выставляем нужное состояние
-  leaves.forEach((leaf, i) => {
-    leaf.classList.remove('turning');
-    leaf.classList.toggle('flipped', i < target);
-  });
-  current = target;
-  book.classList.toggle('open', current > 0);
-  book.classList.toggle('closed', current === 0);
-  scene.classList.toggle('open', current > 0);
-  setEnd(current === leafCount);
-  restack();
-  updateUI();
-  busy = false;
-}
-
-slider.addEventListener('input', () => {
-  const target = parseInt(slider.value, 10);
-  if (!isNaN(target)) jumpTo(target);
-});
 
 /* ===== сердечки на финальной странице ===== */
 function burstHearts(e) {
@@ -497,14 +453,60 @@ async function uploadToDrive(file, caption) {
     caps[fileId] = finalCaption;
     setStoredCaptions(caps);
 
-    setStatus('Готово! Фото в альбоме — сейчас появится в книге.');
-    setTimeout(() => { location.reload(); }, 1600);
+    setStatus('Готово! Фото в альбоме.');
+    document.getElementById('fileInput').value = '';
+    document.getElementById('captionInput').value = '';
+    refreshBookAndGallery();
   } catch (e) {
     setStatus('Не получилось загрузить: ' + e.message, true);
     console.error('upload error:', e);
   }
 }
 
+/* ===== обновить книгу и галерею на месте (без перезагрузки страницы) ===== */
+async function refreshBookAndGallery() {
+  await rebuildWithDrivePhotos();
+  await renderGallery();
+}
+/* тихая загрузка одного файла (для пакетной): без своих статусов и обновлений */
+async function uploadToDriveSilent(file, caption) {
+  const metadata = { name: file.name, parents: [CONFIG.FOLDER_ID] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', file);
+  try {
+    const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken },
+      body: form
+    });
+    if (resp.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      accessToken = null;
+      setStatus('Токен истёк — войди в Google заново', true);
+      return null;
+    }
+    if (!resp.ok) { setStatus('Не удалось загрузить ' + file.name, true); return null; }
+    const data = await resp.json();
+    const fileId = data.id;
+    /* публичная ссылка */
+    try {
+      await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/permissions', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+    } catch (e) {}
+    /* подпись */
+    const caps = getStoredCaptions();
+    caps[fileId] = caption.trim() ? caption.trim() : randomSweet();
+    setStoredCaptions(caps);
+    return fileId;
+  } catch (e) {
+    setStatus('Ошибка: ' + e.message, true);
+    return null;
+  }
+}
 /* ===== скрытие фото из альбома (фото остаётся на Google Drive) ===== */
 function hidePhotoFromAlbum(fileId) {
   hidePhoto(fileId);
@@ -649,7 +651,7 @@ async function renderGallery() {
         const ok = await deleteFromDrive(f.id);
         if (ok) {
           unhidePhoto(f.id); // убираем из скрытых — фото больше не существует
-          setTimeout(() => location.reload(), 600);
+          refreshBookAndGallery();
         } else {
           kill.disabled = false;
         }
@@ -668,7 +670,7 @@ async function renderGallery() {
       } else {
         hidePhotoFromAlbum(f.id);
       }
-      setTimeout(() => location.reload(), 600);
+      refreshBookAndGallery();
     });
     cell.appendChild(btn);
     gallery.appendChild(cell);
@@ -687,7 +689,7 @@ function moveDrivePhoto(fileId, dir) {
     order.splice(idx, 1);
     order.splice(target, 0, fileId);
     setDriveOrder(order);
-    setTimeout(() => location.reload(), 400);
+    refreshBookAndGallery();
   });
 }
 
@@ -716,12 +718,28 @@ document.getElementById('cancelUpload').addEventListener('click', () => {
 
 document.getElementById('loginBtn').addEventListener('click', loginGoogle);
 
-document.getElementById('uploadBtn').addEventListener('click', () => {
+/* загрузка сразу нескольких фото: каждое загружается по очереди */
+let uploading = false;
+document.getElementById('uploadBtn').addEventListener('click', async () => {
+  if (uploading) return;
   const fileInput = document.getElementById('fileInput');
   const caption = document.getElementById('captionInput').value;
-  if (!fileInput.files || !fileInput.files[0]) { setStatus('Сначала выбери фото', true); return; }
+  if (!fileInput.files || !fileInput.files.length) { setStatus('Сначала выбери фото', true); return; }
   if (!accessToken) { setStatus('Сначала войди в Google', true); return; }
-  uploadToDrive(fileInput.files[0], caption);
+
+  const files = Array.from(fileInput.files);
+  uploading = true;
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  for (let i = 0; i < files.length; i++) {
+    setStatus('Загружаю ' + (i + 1) + ' из ' + files.length + '…');
+    await uploadToDriveSilent(files[i], caption.trim());
+  }
+  uploading = false;
+  btn.disabled = false;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('captionInput').value = '';
+  setStatus('Готово! Загружено фото: ' + files.length + ' — уже в книге.');
 });
 
 modal.addEventListener('click', (e) => {

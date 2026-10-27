@@ -20,8 +20,6 @@
 
 <div class="hud">
   <div class="slider-wrap">
-    <label for="pageSlider">стр.</label>
-    <input type="range" id="pageSlider" min="0" max="15" value="0" step="1" aria-label="Быстрая навигация по страницам">
     <span class="progress" id="progress">обложка</span>
   </div>
 </div>
@@ -39,8 +37,8 @@
     </div>
 
     <div class="upload-form hidden" id="uploadForm">
-      <label for="fileInput">Выбрать фото</label>
-      <input type="file" id="fileInput" accept="image/*">
+      <label for="fileInput">Выбрать фото (можно несколько)</label>
+      <input type="file" id="fileInput" accept="image/*" multiple>
       <label for="captionInput">Подпись (пусто — подберу милую сам)</label>
       <input type="text" id="captionInput" placeholder="например: наш вечер у моря">
       <div class="row">

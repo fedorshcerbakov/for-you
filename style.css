@@ -407,30 +407,43 @@ body{
 .kill-btn:hover{ background:#a02020; }
 .kill-btn:disabled{ opacity:.5; }
 
-/* ---------- мобильный режим ---------- */
-body.mobile .leaf{ left:0; width:100%; }
-body.mobile .leaf .page.front{ border-radius: 6px; }
-body.mobile .leaf.cover .page.front{ border-radius: 6px; }
-body.mobile .book-base{ inset:0; border-radius: 6px; }
-body.mobile .book-base::after{ width: 14px; }
-body.mobile .book{
-  width: calc(var(--page-h) * 0.78);
-  height: var(--page-h);
-}
-body.mobile .book:not(.open){ transform: translateX(calc(var(--page-h) * -.39)); }
-body.mobile .scene.end .book{ transform: translateX(calc(var(--page-h) * .39)); }
-
+/* ---------- мобильный режим: одна страница за раз ---------- */
+/* книга = одна страница (узкая), листы занимают всю книгу */
 @media (max-width:600px){
-  :root{ --page-h: min(62vh, 90vw / 0.75); }
-  .nav{ width:44px; height:44px; font-size:24px; top:auto; bottom:74px; }
+  :root{ --page-h: min(70vh, 120vw); }
+
+  .book{
+    width: calc(var(--page-h) * 0.78);   /* ширина одной страницы */
+    height: var(--page-h);
+    perspective: 1400px;
+  }
+  /* все листы — на всю узкую книгу, корешок слева */
+  .leaf{ left:0; width:100%; }
+  /* сдвиги: закрытая (обложка) в центре, открытая на месте */
+  .book:not(.open){ transform: translateX(0) rotateX(4deg); }
+  .book.open{ transform: translateX(0) rotateX(4deg); }
+  .scene.end .book{ transform: translateX(0) rotateX(4deg); }
+
+  .book-base{ inset:0; border-radius: 6px; }
+  .book-base::after{ width: 12px; }
+  .leaf .page.front{ border-radius: 6px; }
+  .leaf.cover .page.front{ border-radius: 6px; }
+  .book-shadow{ display:none; }
+
+  /* в закрытом виде обложка уже в центре — ничего не прячем,
+     но закрываем «внутренности» слева: книга узкая, листы все в ней */
+  .scene.closed .leaf{ visibility:hidden; }
+  .scene.closed .leaf.cover{ visibility:visible; }
+
+  /* интерфейс */
+  .nav{ width:44px; height:44px; font-size:24px; top:auto; bottom:80px; }
   .nav.prev{ left:10px; }
   .nav.next{ right:10px; }
   .photo{ height:62%; }
   .page-content{ padding: 7% 9%; gap: 2.5%; }
   .caption{ font-size: 12px; }
   .page-num{ font-size: 10px; }
-  .book-shadow{ display:none; }
-  .hud{ bottom:10px; }
+  .hud{ bottom:12px; }
   .hud .slider-wrap{ padding:5px 10px; gap:6px; }
   .hud input[type="range"]{ width:130px; }
   .hud .progress{ font-size:11px; padding:4px 8px; }
