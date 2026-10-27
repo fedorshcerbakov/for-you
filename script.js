@@ -226,7 +226,14 @@ function flipPrev() {
   leaf.style.zIndex = 100;
   leaf.classList.remove('flipped');
   book.classList.toggle('open', current > 0);
-  if (current === 0) { book.classList.add('closed'); scene.classList.add('closed'); }
+  /* закрытие: обложка переворачивается назад — страница 2 видна, пока обложка не легла.
+     класс closed ставим ПОСЛЕ анимации возврата обложки */
+  if (current === 0) {
+    setTimeout(() => {
+      book.classList.add('closed');
+      scene.classList.add('closed');
+    }, DURATION + 400);
+  }
   setTimeout(() => {
     restack();
     busy = false;
