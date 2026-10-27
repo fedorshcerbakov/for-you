@@ -187,6 +187,7 @@ pages.forEach(p => {
 
 /* ===== логика перелистывания (механика реальной книги) ===== */
 let current = 0;          // сколько листов уже перевёрнуто
+let closeTimer = null;     // таймер отложенного закрытия (анти-гонка)
 const DURATION = 1000;    // должно совпадать с transition в CSS
 let busy = false;         // защита от двойных нажатий во время анимации
 
@@ -201,6 +202,8 @@ restack();
 function flipNext() {
   if (busy || current >= leafCount) return;
   busy = true;
+  /* открытие отменяет отложенное закрытие (анти-гонка таймеров) */
+  if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
   const leaf = leaves[current];
   leaf.style.zIndex = 100;                     // лист на время поворота поверх всех
   leaf.classList.add('flipped');
@@ -229,9 +232,11 @@ function flipPrev() {
   /* закрытие: обложка переворачивается назад — страница 2 видна, пока обложка не легла.
      класс closed ставим ПОСЛЕ анимации возврата обложки */
   if (current === 0) {
-    setTimeout(() => {
-      book.classList.add('closed');
-      scene.classList.add('closed');
+    /* таймер закрытия: отменяется, если книгу открыли снова (анти-гонка) */
+    if (closeTimer) clearTimeout(closeTimer);
+    closeTimer = setTimeout(() => {
+      closeTimer = null;
+      if (current === 0) { book.classList.add('closed'); scene.classList.add('closed'); }
     }, DURATION + 400);
   }
   setTimeout(() => {
@@ -796,11 +801,17 @@ async function loadDrivePhotos() {
     const caps = getStoredCaptions();
     const hidden = getHiddenIds();
     const files = (data.files || []).filter(f => !hidden.includes(f.id));
-    return orderDrivePhotos(files).map(f => ({
-      src: 'https://lh3.googleusercontent.com/d/' + f.id,
-      caption: caps[f.id] || randomSweet(),
-      id: f.id
-    }));
+    const ordered = orderDrivePhotos(files).map(f => {
+      /* подпись фиксируется при первом показе и сохраняется — не меняется */
+      if (!caps[f.id]) caps[f.id] = randomSweet();
+      return {
+        src: 'https://lh3.googleusercontent.com/d/' + f.id,
+        caption: caps[f.id],
+        id: f.id
+      };
+    });
+    setStoredCaptions(caps);
+    return ordered;
   } catch (e) { return []; }
 }
 
@@ -887,8 +898,10 @@ async function rebuildWithDrivePhotos() {
     leaves.push(leaf);
   }
   leafCount = newCount;
-  /* ползунок удалён */
-  current = Math.min(current, leafCount);
+  /* ВОССТАНАВЛИВАЕМ состояние: первые current листов — перевёрнуты,
+     как было до пересборки (иначе книга «теряет» прочитанные страницы) */
+  current = Math.min(current, newCount);
+  leaves.forEach((l, i) => { l.classList.toggle('flipped', i < current); });
   setEnd(current === leafCount);
   restack();
   updateUI();
