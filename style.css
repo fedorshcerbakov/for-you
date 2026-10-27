@@ -467,6 +467,8 @@ body{
   .book-shadow{ display:none; }
   .leaf .page.front{ border-radius: 6px; box-shadow: 0 6px 20px rgba(90,20,50,.25); }
   .leaf.cover .page.front{ border-radius: 6px; }
+  .cover-face{ filter: saturate(1.25) brightness(1.05); }
+  .cover-title-wrap{ filter: drop-shadow(0 2px 6px rgba(90,10,40,.35)); }
   .leaf .page.back{ border-radius: 6px; }
 
   /* закрытая книга: только обложка, остальные — стопка сзади, виден край */
@@ -488,18 +490,18 @@ body{
   .nav.next{ right:10px; }
   .photo{ height:62%; }
   .page-content{ padding: 7% 9%; gap: 2.5%; }
-  .caption{ font-size: 12px; }
-  .page-num{ font-size: 10px; }
+  .caption{ font-size: 13px; font-weight: 600; }
+  .page-num{ font-size: 11px; font-weight: 500; }
   .hud{ bottom:12px; }
   .hud .slider-wrap{ padding:5px 10px; gap:6px; }
-  .progress{ font-size:11px; padding:4px 8px; }
+  .progress{ font-size:11px; padding:4px 8px; font-weight: 600; }
   .upload-fab{ width:44px; height:44px; font-size:24px; top:12px; right:12px; }
   .modal-box{ padding:20px 16px; }
   .final .pair{ width:56%; }
   .final h2{ font-size: 22px; }
   .final p{ font-size: 13px; }
-  .cover-title{ font-size: 34px; }
-  .cover-heart{ font-size: 24px; }
+  .cover-title{ font-size: 38px; letter-spacing: 1px; text-shadow: 0 3px 12px rgba(90,10,40,.5); }
+  .cover-heart{ font-size: 30px; }
   .cover-lock{ font-size: 26px; right:-10px; }
   .gallery{ max-height:180px; }
 }

@@ -243,8 +243,13 @@ function mobileShow() {
 }
 
 /* переворот вперёд: карта idx поворачивается, открывая idx+1 */
+let mobileBusy = false;   /* защита от быстрого листания */
+
 function mobileNext() {
+  if (mobileBusy) return;
   if (mobileBook.idx >= pages.length - 1) return;
+  mobileBusy = true;
+  setTimeout(() => { mobileBusy = false; }, 450);
   const card = mobileBook.cardEls[mobileBook.idx];
   card.style.zIndex = 40;
   card.classList.add('turned');
@@ -258,6 +263,9 @@ function mobileNext() {
 }
 
 function mobilePrev() {
+  if (mobileBusy) return;
+  mobileBusy = true;
+  setTimeout(() => { mobileBusy = false; }, 450);
   if (mobileBook.idx <= 0) return;
   mobileBook.idx--;
   const card = mobileBook.cardEls[mobileBook.idx];
