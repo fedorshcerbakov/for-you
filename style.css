@@ -407,8 +407,9 @@ body{
 .kill-btn:hover{ background:#a02020; }
 .kill-btn:disabled{ opacity:.5; }
 
-/* ---------- мобильный режим: одна страница за раз ---------- */
-/* книга = одна страница (узкая), листы занимают всю книгу */
+/* ---------- мобильный режим: карточная книга (по одной странице) ---------- */
+/* обложка → стр.1 → стр.2 → … листы переворачиваются как карты вокруг центра,
+   перевёрнутые уходят в стопку позади (виден их край-«подложка») */
 @media (max-width:600px){
   :root{ --page-h: min(70vh, 120vw); }
 
@@ -417,26 +418,48 @@ body{
     height: var(--page-h);
     perspective: 1100px;
     overflow: visible;
+    transform: translateX(0);
   }
-  /* книга по центру сцены — сцена flex-центрирует */
   .scene{ display:flex; align-items:center; justify-content:center; }
-  /* все листы — на всю узкую книгу, корешок слева */
-  .leaf{ left:0; width:100%; transform-origin: center center; z-index:1; }
-  /* сдвиги: закрытая (обложка) в центре, открытая на месте */
-  .book:not(.open){ transform: translateX(0) rotateX(4deg); }
-  .book.open{ transform: translateX(0) rotateX(4deg); }
-  .scene.end .book{ transform: translateX(0) rotateX(4deg); }
+  .book:not(.open), .book.open, .scene.end .book{ transform: none; }
 
-  .book-base{ inset:0; border-radius: 6px; z-index:0; }
-  .book-base::after{ width: 12px; }
-  .leaf .page.front{ border-radius: 6px; }
-  .leaf.cover .page.front{ border-radius: 6px; }
+  /* лист — вся книга, вращение вокруг центра (карта) */
+  .leaf{
+    left:0; width:100%;
+    transform-origin: center center;
+    z-index:1;
+  }
+  /* ПЕРЕВЁРНУТЫЕ листы: уезжают «под» — чуть меньше и позади (стопка карт) */
+  .leaf.flipped{
+    transform: rotateY(-180deg) scale(.96);
+    z-index: 0 !important;
+    pointer-events: none;
+  }
+  .leaf.flipped:nth-last-child(2){ scale: .97; }
+  /* тень-край стопки: имитация толщины колоды */
+  .leaf:not(.flipped):not(:first-child)::after{
+    content:''; position:absolute; inset:-3px;
+    border-radius: 8px;
+    background: var(--paper-dark);
+    z-index:-1;
+    box-shadow: 0 2px 4px rgba(90,60,60,.25);
+  }
+
+  .book-base{ display:none; }
   .book-shadow{ display:none; }
+  .leaf .page.front{ border-radius: 6px; box-shadow: 0 6px 20px rgba(90,20,50,.25); }
+  .leaf.cover .page.front{ border-radius: 6px; }
+  .leaf .page.back{ border-radius: 6px; }
 
-  /* в закрытом виде обложка уже в центре — ничего не прячем,
-     но закрываем «внутренности» слева: книга узкая, листы все в ней */
+  /* закрытая книга: только обложка, остальные — стопка сзади, виден край */
   .scene.closed .leaf{ visibility:hidden; }
   .scene.closed .leaf.cover{ visibility:visible; }
+  /* конец книги: задняя обложка */
+  .scene.end .leaf{ visibility:hidden; }
+  .scene.end .leaf:last-child{ visibility:visible; }
+  .scene.end .leaf:last-child .page.back{
+    border-radius: 6px; box-shadow: 0 6px 20px rgba(90,20,50,.3);
+  }
 
   /* интерфейс */
   .nav{ width:44px; height:44px; font-size:24px; top:auto; bottom:80px; }
@@ -448,8 +471,7 @@ body{
   .page-num{ font-size: 10px; }
   .hud{ bottom:12px; }
   .hud .slider-wrap{ padding:5px 10px; gap:6px; }
-  .hud input[type="range"]{ width:130px; }
-  .hud .progress{ font-size:11px; padding:4px 8px; }
+  .progress{ font-size:11px; padding:4px 8px; }
   .upload-fab{ width:44px; height:44px; font-size:24px; top:12px; right:12px; }
   .modal-box{ padding:20px 16px; }
   .final .pair{ width:56%; }

@@ -191,10 +191,20 @@ let closeTimer = null;     // таймер отложенного закрыти
 const DURATION = 1000;    // должно совпадать с transition в CSS
 let busy = false;         // защита от двойных нажатий во время анимации
 
-// порядок наложения листов: перевёрнутые растут слева, неперевёрнутые убывают справа
+// порядок наложения: ПК — разворотная модель; телефон — карточная
+const isMobile = () => window.matchMedia('(max-width:600px)').matches;
+
 function restack() {
   leaves.forEach((leaf, i) => {
-    leaf.style.zIndex = i < current ? i + 1 : leaves.length - i;
+    if (isMobile()) {
+      /* карточная модель: верх — только что перевёрнутый лист (его back = текущая страница) */
+      if (i === current - 1) leaf.style.zIndex = 200;
+      else if (i === current) leaf.style.zIndex = 150;
+      else if (i < current) leaf.style.zIndex = i + 1;
+      else leaf.style.zIndex = Math.max(1, leaves.length - i - 10);
+    } else {
+      leaf.style.zIndex = i < current ? i + 1 : leaves.length - i;
+    }
   });
 }
 restack();
