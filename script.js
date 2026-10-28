@@ -252,23 +252,24 @@ function mobileNext() {
   if (mobileBusy) return;
   if (mobileBook.idx >= pages.length - 1) return;
   mobileBusy = true;
-  setTimeout(() => { mobileBusy = false; }, 550);
   const card = mobileBook.cardEls[mobileBook.idx];
   card.style.zIndex = 40;
   card.classList.add('turned');
   mobileBook.idx++;
   mobileShow();
-  /* карта после анимации уходит вниз */
+  /* карта доворачивается 0.8с и только потом уходит вниз —
+     всё это время её содержимое видно (плавность) */
   setTimeout(() => {
     card.style.zIndex = 1;
     card.style.visibility = 'hidden';
-  }, 600);
+    mobileBusy = false;
+  }, 850);
 }
 
 function mobilePrev() {
   if (mobileBusy) return;
   mobileBusy = true;
-  setTimeout(() => { mobileBusy = false; }, 550);
+  setTimeout(() => { mobileBusy = false; }, 850);
   if (mobileBook.idx <= 0) return;
   mobileBook.idx--;
   const card = mobileBook.cardEls[mobileBook.idx];
@@ -277,7 +278,7 @@ function mobilePrev() {
   /* возвращаем переворот */
   card.classList.remove('turned');
   mobileShow();
-  setTimeout(() => { card.style.zIndex = 30; }, 600);
+  setTimeout(() => { card.style.zIndex = 30; }, 850);
 }
 
 function updateMobileUI() {
@@ -487,6 +488,7 @@ function tokenClientInit() {
     return google.accounts.oauth2.initTokenClient({
       client_id: CONFIG.CLIENT_ID,
       scope: 'https://www.googleapis.com/auth/drive.file',
+      ux_mode: 'popup',
       callback: (resp) => {
         if (resp.access_token) {
           accessToken = resp.access_token;
@@ -599,6 +601,8 @@ async function refreshBookAndGallery() {
 }
 /* тихая загрузка одного файла (для пакетной): без своих статусов и обновлений */
 async function uploadToDriveSilent(file, caption) {
+  /* страховка: не-изображения не грузим вовсе */
+  if (!(file.type.startsWith('image/') || (!file.type && /\.(jpe?g|png|gif|webp|bmp|heic)$/i.test(file.name)))) { console.warn('Пропущен не-фото файл:', file.name); return null; }
   const metadata = { name: file.name, parents: [CONFIG.FOLDER_ID] };
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
@@ -879,9 +883,16 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
   const fileInput = document.getElementById('fileInput');
   const caption = document.getElementById('captionInput').value;
   if (!fileInput.files || !fileInput.files.length) { setStatus('Сначала выбери фото', true); return; }
-  if (!accessToken) { setStatus('Сначала войди в Google', true); return; }
 
-  const files = Array.from(fileInput.files);
+  /* проверка типов: грузим только изображения, остальное пропускаем */
+  const allFiles = Array.from(fileInput.files);
+  /* фильтр: изображения; пустой type (бывает на Android) — проверяем расширение */
+  const isImage = f => f.type.startsWith('image/') || (!f.type && /\.(jpe?g|png|gif|webp|bmp|heic)$/i.test(f.name));
+  const files = allFiles.filter(isImage);
+  const skipped = allFiles.length - files.length;
+  if (skipped > 0) setStatus('Пропущено не-фото файлов: ' + skipped, true);
+  if (!files.length) { setStatus('Выбери хотя бы одно изображение (jpg, png…)', true); return; }
+  if (!accessToken) { setStatus('Сначала войди в Google', true); return; }
   uploading = true;
   const btn = document.getElementById('uploadBtn');
   btn.disabled = true;

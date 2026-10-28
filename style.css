@@ -439,8 +439,8 @@ body{
   background: var(--paper);
   overflow: hidden;
 }
-/* у turned-карты содержимое зеркалится — прячем (карта ушла вниз) */
-.m-card.turned .m-face{ visibility: hidden; }
+/* turned-карта доворачивается с видимым содержимым (плавность);
+   скрываем её ПОСЛЕ анимации через JS (mobileNext таймаут) */
 @media (max-width:600px){
   :root{ --page-h: min(70vh, 120vw); }
 
