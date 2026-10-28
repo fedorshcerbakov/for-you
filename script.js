@@ -234,12 +234,10 @@ function mobileShow() {
       /* следующая — под текущей, чуть меньше; вырастет при показе */
       card.style.zIndex = 20;
       card.style.visibility = 'visible';
-      card.classList.add('m-under');
-      requestAnimationFrame(() => card.classList.add('risen'));
     } else {
       card.style.zIndex = Math.max(1, 10 - Math.abs(i - mobileBook.idx));
       card.style.visibility = i < mobileBook.idx - 2 || i > mobileBook.idx + 3 ? 'hidden' : 'visible';
-      card.classList.remove('m-under', 'risen');
+
     }
   });
   updateMobileUI();

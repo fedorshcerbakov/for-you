@@ -420,17 +420,8 @@ body{
   will-change: transform;          /* аппаратное ускорение */
 }
 .m-card.turned{ transform: rotateY(-180deg); }
-/* следующая карта — чуть меньше и с мягкой тенью; ПОСЛЕ переворота
-   она плавно вырастает до полного размера (эффект «страница подошла») */
-.m-card.m-under{
-  transform: scale(.96);
-  box-shadow: 0 4px 12px rgba(90,20,50,.18);
-  transition: transform .8s cubic-bezier(.37,.02,.2,1), box-shadow .8s ease;
-}
-.m-card.m-under.risen{
-  transform: scale(1);
-  box-shadow: 0 8px 24px rgba(90,20,50,.28);
-}
+/* все карты одного полного размера: переворот вперёд и назад
+   выглядит одинаково (симметрия) */
 .m-card .m-face{
   position:absolute; inset:0;
   backface-visibility: hidden;
