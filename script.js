@@ -231,12 +231,15 @@ function mobileShow() {
       card.style.visibility = 'visible';
       card.classList.remove('turned');
     } else if (i === mobileBook.idx + 1) {
-      /* следующая — сразу под текущей (её увидим после переворота) */
+      /* следующая — под текущей, чуть меньше; вырастет при показе */
       card.style.zIndex = 20;
       card.style.visibility = 'visible';
+      card.classList.add('m-under');
+      requestAnimationFrame(() => card.classList.add('risen'));
     } else {
       card.style.zIndex = Math.max(1, 10 - Math.abs(i - mobileBook.idx));
       card.style.visibility = i < mobileBook.idx - 2 || i > mobileBook.idx + 3 ? 'hidden' : 'visible';
+      card.classList.remove('m-under', 'risen');
     }
   });
   updateMobileUI();
@@ -249,7 +252,7 @@ function mobileNext() {
   if (mobileBusy) return;
   if (mobileBook.idx >= pages.length - 1) return;
   mobileBusy = true;
-  setTimeout(() => { mobileBusy = false; }, 450);
+  setTimeout(() => { mobileBusy = false; }, 550);
   const card = mobileBook.cardEls[mobileBook.idx];
   card.style.zIndex = 40;
   card.classList.add('turned');
@@ -265,7 +268,7 @@ function mobileNext() {
 function mobilePrev() {
   if (mobileBusy) return;
   mobileBusy = true;
-  setTimeout(() => { mobileBusy = false; }, 450);
+  setTimeout(() => { mobileBusy = false; }, 550);
   if (mobileBook.idx <= 0) return;
   mobileBook.idx--;
   const card = mobileBook.cardEls[mobileBook.idx];
